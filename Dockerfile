@@ -1,4 +1,4 @@
-FROM node:latest-alpine
+FROM node:latest
 
 COPY . .
 RUN npm install
