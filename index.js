@@ -26,7 +26,7 @@ const server = http.createServer(async (req, res) => {
 	const clientDomain = req.headers.host;
 
 
-	if(url == "/"){
+	if(url == "/baso"){
 		// get all files in media folder
 		const files = fs.readdirSync('./media');
 		res.writeHead(200, {'Content-Type': 'text/html'});
@@ -41,14 +41,14 @@ const server = http.createServer(async (req, res) => {
 
 	// Api endpoint
 
-	if(url == "/api/get"){
+	if(url == "/api/baso/get"){
 		getCats();
 		res.writeHead(200, {'Content-Type': 'application/json'});
 		res.end(JSON.stringify({"cats": "gotten"}));
 		return;
 	}
 
-	if(url == "/api/cats"){
+	if(url == "/api/baso"){
 		const files = fs.readdirSync('./media');
 		res.writeHead(200, {'Content-Type': 'application/json'});
 
@@ -73,28 +73,6 @@ const server = http.createServer(async (req, res) => {
 		return;
 	}
 
-
-	if(url == "/random"){
-		res.writeHead(200, {'Content-Type': 'image/jpg'});
-
-		const cat = await getRandomCat();
-		let jpg = await getJPG(cat)
-		jpg.arrayBuffer().then((buffer) => {
-			res.end(Buffer.from(buffer));
-		});
-		return;
-	}
-
-	if(url.endsWith("/nocat")){
-		res.writeHead(200, {'Content-Type': 'image/jpg'});
-
-		const cat = await getRandomCat();
-		let jpg = await getJPG(cat)
-		jpg.arrayBuffer().then((buffer) => {
-			res.end(Buffer.from(buffer));
-		});
-		return;
-	}
 
 	// if file exists
 	if (fs.existsSync('.' + url)) {
