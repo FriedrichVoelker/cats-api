@@ -52,16 +52,6 @@ const server = http.createServer(async (req, res) => {
 		const files = fs.readdirSync('./media');
 		res.writeHead(200, {'Content-Type': 'application/json'});
 
-		// get file size
-		const cats = files.map((file) => {
-			const stats = fs.statSync(`./media/${file}`);
-			const fileSizeInBytes = stats.size;
-			return {
-				"name": file,
-				"size": fileSizeInBytes
-			}
-		});
-
 		let resp = []
 
 		files.forEach((file) => {
@@ -118,8 +108,8 @@ const server = http.createServer(async (req, res) => {
 	let jpg = await getJPG(cat)
 	jpg.arrayBuffer().then((buffer) => {
 		res.end(Buffer.from(buffer));
+		return;
 	});
-	return;
 })
 server.listen(process.env.HTTP_PORT || 1257, () => {
 	console.log('Server running at http://localhost:' + (process.env.HTTP_PORT || 1257) + '/');
