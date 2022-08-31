@@ -1,8 +1,9 @@
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 require("dotenv").config();
-const { randomBytes } = require('crypto');
+const formData = require('form-data');
 const fs = require('fs');
 const http = require('http');
+const os = require('node:os');
 
 // get request
 const get = async (url) => {
@@ -75,12 +76,14 @@ const server = http.createServer(async (req, res) => {
 
 
 	// if file exists
-	if (fs.existsSync('.' + url)) {
+	if (url != "/" && fs.existsSync('.' + url)) {
 		res.writeHead(200, {'Content-Type': 'image/jpeg'});
 		res.end(fs.readFileSync('.' + url));
 		return;
 	}
-	res.writeHead(200, {'Content-Type': 'image/jpg'});
+
+
+	res.writeHead(200, {'Content-Type': 'image/jpeg'});
 
 	const cat = await getRandomCat();
 	let jpg = await getJPG(cat)
@@ -95,50 +98,50 @@ server.listen(process.env.HTTP_PORT || 1257, () => {
 
 
 async function getCats() {
-	const data = await get(`https://api.twitter.com/2/tweets/search/recent?query=from:basostream has:media is:reply&tweet.fields=author_id&expansions=attachments.media_keys&media.fields=url`)
-	// const data = {
-	// 	"data": [
-	// 	  {
-	// 		"text": "@itsmahluna 🥰❤️✨ https://t.co/hZ3Po4AoM1",
-	// 		"id": "1563646182223593472",
-	// 		"attachments": {
-	// 		  "media_keys": [
-	// 			"3_1563646177991692288"
-	// 		  ]
-	// 		},
-	// 		"author_id": "3005575467"
-	// 	  },
-	// 	  {
-	// 		"text": "@xLumenti 🥰🥰🥰 https://t.co/1sLJThtNsn",
-	// 		"id": "1562594123491979264",
-	// 		"attachments": {
-	// 		  "media_keys": [
-	// 			"3_1562594119247171584"
-	// 		  ]
-	// 		},
-	// 		"author_id": "3005575467"
-	// 	  }
-	// 	],
-	// 	"includes": {
-	// 	  "media": [
-	// 		{
-	// 		  "media_key": "3_1563646177991692288",
-	// 		  "type": "photo",
-	// 		  "url": "https://pbs.twimg.com/media/FbMv6hGXkAADA2S.jpg"
-	// 		},
-	// 		{
-	// 		  "media_key": "3_1562594119247171584",
-	// 		  "type": "photo",
-	// 		  "url": "https://pbs.twimg.com/media/Fa9zEo3XkAA0PRh.jpg"
-	// 		}
-	// 	  ]
-	// 	},
-	// 	"meta": {
-	// 	  "newest_id": "1563646182223593472",
-	// 	  "oldest_id": "1562594123491979264",
-	// 	  "result_count": 2
-	// 	}
-	//   }
+	// const data = await get(`https://api.twitter.com/2/tweets/search/recent?query=from:basostream has:media is:reply&tweet.fields=author_id&expansions=attachments.media_keys&media.fields=url`)
+	const data = {
+		"data": [
+		  {
+			"text": "@itsmahluna 🥰❤️✨ https://t.co/hZ3Po4AoM1",
+			"id": "1563646182223593472",
+			"attachments": {
+			  "media_keys": [
+				"3_1563646177991692288"
+			  ]
+			},
+			"author_id": "3005575467"
+		  },
+		  {
+			"text": "@xLumenti 🥰🥰🥰 https://t.co/1sLJThtNsn",
+			"id": "1562594123491979264",
+			"attachments": {
+			  "media_keys": [
+				"3_1562594119247171584"
+			  ]
+			},
+			"author_id": "3005575467"
+		  }
+		],
+		"includes": {
+		  "media": [
+			{
+			  "media_key": "3_1563646177991692288",
+			  "type": "photo",
+			  "url": "https://pbs.twimg.com/media/FbMv6hGXkAADA2S.jpg"
+			},
+			{
+			  "media_key": "3_1562594119247171584",
+			  "type": "photo",
+			  "url": "https://pbs.twimg.com/media/Fa9zEo3XkAA0PRh.jpg"
+			}
+		  ]
+		},
+		"meta": {
+		  "newest_id": "1563646182223593472",
+		  "oldest_id": "1562594123491979264",
+		  "result_count": 2
+		}
+	  }
 
 	  data.includes.media.forEach(async (media) => {
 		const {media_key, type, url} = media;
@@ -154,11 +157,17 @@ async function getCats() {
 		}
 
 		if (type === 'photo') {
-			(await getJPG(url)).body.pipe(fs.createWriteStream(`./media/BasoStream_${media_key}.jpg`));
+			const cat = await getJPG(url)
+			
+			let stream = cat.body.pipe(fs.createWriteStream(`./media/BasoStream_${media_key}.jpg`))
+			stream.on("finish", () => {
+				handleNewMedia(media);
+			})
+			
+
 		} else {
 			(await getJPG(url)).body.pipe(fs.createWriteStream(`./media/BasoStream_${media_key}.mp4`));
 		}
-		handleNewMedia(media);
 		
 
 	  })
@@ -173,7 +182,14 @@ const getRandomCat = async () => {
 const handleNewMedia = async (media) => {
 	const {media_key, type, url} = media;
 
-	console.log(`New ${type || "media"}: ` + media_key)
-};
 
-// getCats()
+	const form = new formData();
+	form.append('file1', fs.createReadStream(`./media/BasoStream_${media_key}.jpg`)); // give absolute path if possible
+
+	fetch(process.env.DISCORD_WEBHOOK_URL, {
+		'method': 'POST',
+		'body': form,
+		headers: form.getHeaders()
+	})
+	.catch(err => console.error(err));
+};
