@@ -98,6 +98,7 @@ const server = http.createServer(async (req, res) => {
 		});
 
 		res.writeHead(200, {'Content-Type': 'application/json'});
+		outcats.unshift({amount: outcats.length})
 		res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms", cats: outcats}));
 		return;
 	}
@@ -116,6 +117,18 @@ const server = http.createServer(async (req, res) => {
 		clearInterval(interval);
 		res.writeHead(200, {'Content-Type': 'application/json'});
 		res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms", "status": "stopped"}));
+		return;
+	}
+
+	if(url == "/api/random"){
+		let cat = await getRandomCatFromDB();
+		cat = {
+			"source": cat.source,
+			"created": cat.created_at,
+			"url": `http://${clientDomain}/cat/${cat.uuid}`
+		}
+		res.writeHead(200, {'Content-Type': 'application/json'});
+		res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms", "cat": cat}));
 		return;
 	}
 
