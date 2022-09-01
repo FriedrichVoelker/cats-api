@@ -98,7 +98,8 @@ const server = http.createServer(async (req, res) => {
 		});
 
 		res.writeHead(200, {'Content-Type': 'application/json'});
-		outcats.unshift({amount: outcats.length})
+		outcats = {amount: cats.length, ...outcats};
+		// Object.assign(outcats, {amount: outcats.length})
 		res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms", cats: outcats}));
 		return;
 	}
