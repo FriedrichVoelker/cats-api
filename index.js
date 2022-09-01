@@ -34,8 +34,8 @@ const server = http.createServer(async (req, res) => {
 	const now = new Date();
 	let stopped = false;
 	const url = req.url;
-	const clientDomain = new URL(req.url).host;
-	const scheme = new URL(req.url).protocol || 'http';
+	const clientDomain = new URL(req.url, `http://${request.getHeaders().host}`).host;
+	const scheme = new URL(req.url, `http://${request.getHeaders().host}`).protocol || 'http';
 
 
 	if(url == "/baso"){
