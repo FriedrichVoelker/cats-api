@@ -272,8 +272,13 @@ async function getCats() {
 }
 
 const getRandomCat = async () => {
-	let res = await get(`https://api.thecatapi.com/v1/images/search`);
-	return res[0].url;
+	if(Math.random() > 0.5){
+		let res = await get(`https://api.thecatapi.com/v1/images/search`);
+		return res[0].url;
+	} else {
+		let res = await get("https://cataas.com/cat?json=true")
+		return "https://cataas.com" +  res.url;
+	}
 }
 
 const handleNewMedia = async (media) => {
@@ -321,6 +326,19 @@ const getCat = async () => {
 }
 getCat()
 
+
+// get data from static/cats.json
+const getJsonCats = async () => {
+	let data = JSON.parse(fs.readFileSync('static/cats.json', 'utf-8'))
+	data.forEach(async (cat) => {
+		let jpg = await getMedia(cat)
+
+		let blob = await jpg.arrayBuffer();
+
+		storeCatsToMYSQL(blob, cat)
+	})
+}
+getJsonCats()
 
 // setInterval(async () => {
 // 	await getCat();
