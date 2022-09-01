@@ -1,5 +1,6 @@
 services:
   web:
+    container_name: cats_node
     env_file:
       - ./.env
     build: .
@@ -12,6 +13,7 @@ services:
       - ./media:/app/media
   db:
     image: mysql:5.7
+    container_name: cats_db
     env_file:
       - ./.env
     restart: unless-stopped
