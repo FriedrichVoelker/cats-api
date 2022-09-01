@@ -104,7 +104,9 @@ const server = http.createServer(async (req, res) => {
 
 	if(url == "/api/getcat/start"){
 		clearInterval(interval);
-		interval = setInterval(getCat, 1000);
+		interval = setInterval(async () => {
+			await getCat();
+		} , 1000);
 		res.writeHead(200, {'Content-Type': 'application/json'});
 		res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms", "status": "started"}));
 		return;
