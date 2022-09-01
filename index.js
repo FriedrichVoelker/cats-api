@@ -14,7 +14,12 @@ const get = async (url) => {
 	const response = await fetch(url, {
 		headers: {"Authorization":" Bearer " + process.env.TWITTER_API_KEY}
 	});
-	return await response.json();
+	try{
+		return await response.json();
+	}catch(e){
+		console.log(e);
+		return response;
+	}
 };
 
 const getJPG = async (url) => {
@@ -36,6 +41,18 @@ const server = http.createServer(async (req, res) => {
 	const url = req.url;
 	const clientDomain = process.env.URL_DOMAIN;
 	const scheme = process.env.URL_PROTOCOL || 'http';
+
+	if(url == "/all"){
+		const cats = await db.query("SELECT * FROM images");
+		res.writeHead(200, {'Content-Type': 'text/html'});
+		res.write(`<html><head><title>Cats</title></head><body style="margin:0px auto;text-align: center;padding:2rem;background-color: rgb(58, 58, 58);">`);
+		cats.forEach((cat) => {
+			res.write(`<img loading="lazy"  style="max-width:50%" src="/cat/${cat.uuid}" /><br><a style="color:rgb(185, 13, 13);" href="/cat/${cat.uuid}">${cat.uuid}</a><br><br>`);
+		})
+		res.write(`</body></html>`);
+		res.end();
+		return;
+	}
 
 
 	if(url == "/baso"){
