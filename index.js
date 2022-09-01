@@ -1,9 +1,13 @@
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 require("dotenv").config();
+const { clear } = require('console');
 const formData = require('form-data');
 const fs = require('fs');
 const http = require('http');
 const os = require('node:os');
+const db = require('./util/db.js');
+
+let interval;
 
 // get request
 const get = async (url) => {
@@ -20,8 +24,15 @@ const getJPG = async (url) => {
 	return response
 }
 
+const getMedia = async (url) => {
+	const response = await fetch(url);
+	return response
+}
 
 const server = http.createServer(async (req, res) => {
+	getCat();
+	const now = new Date();
+	let stopped = false;
 	const url = req.url;
 
 	const clientDomain = req.headers.host;
@@ -45,7 +56,7 @@ const server = http.createServer(async (req, res) => {
 	if(url == "/api/baso/get"){
 		getCats();
 		res.writeHead(200, {'Content-Type': 'application/json'});
-		res.end(JSON.stringify({"cats": "gotten"}));
+		res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms","cats": "gotten"}));
 		return;
 	}
 
@@ -70,10 +81,41 @@ const server = http.createServer(async (req, res) => {
 		})
 
 
-		res.end(JSON.stringify(resp));
+		res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms",cats:resp}));
 		return;
 	}
 
+	if(url == "/api/all"){
+		const cats = await db.query(`SELECT uuid, source, created_at FROM images`);
+
+		let outcats = {}
+		cats.forEach((cat) => {
+			outcats[cat.uuid] = {
+				"source": cat.source,
+				"created": cat.created_at,
+				"url": `http://${clientDomain}/cat/${cat.uuid}`
+			};
+		});
+
+		res.writeHead(200, {'Content-Type': 'application/json'});
+		res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms", cats: outcats}));
+		return;
+	}
+
+	if(url == "/api/getcat/start"){
+		clearInterval(interval);
+		interval = setInterval(getCat, 1000);
+		res.writeHead(200, {'Content-Type': 'application/json'});
+		res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms", "status": "started"}));
+		return;
+	}
+
+	if(url == "/api/getcat/stop"){
+		clearInterval(interval);
+		res.writeHead(200, {'Content-Type': 'application/json'});
+		res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms", "status": "stopped"}));
+		return;
+	}
 
 	// if file exists
 	if (url != "/" && fs.existsSync('.' + url)) {
@@ -83,14 +125,53 @@ const server = http.createServer(async (req, res) => {
 	}
 
 
-	res.writeHead(200, {'Content-Type': 'image/jpeg'});
+	// if uuid in db
+	if(url.includes("/cat/")){
+		const uuid = url.split("/cat/")[1];
+		const cat = await db.query(`SELECT image FROM images WHERE uuid = ?`, [uuid]);
+		if(cat.length > 0){
+			stopped = true;
+			res.writeHead(200, {'Content-Type': 'image/jpeg'});
 
-	const cat = await getRandomCat();
-	let jpg = await getJPG(cat)
-	jpg.arrayBuffer().then((buffer) => {
-		res.end(Buffer.from(buffer));
+			const buffer = cat[0].image;
+			const jpg = Buffer.from(buffer, 'binary');
+			res.end(jpg);
+			return;
+		}
+	}
+
+	if(url == "/random"){
+		res.writeHead(200, {'Content-Type': 'image/jpeg'});
+
+		const cat = await getRandomCatFromDB();
+
+		const buffer = cat.image;
+		const jpg = Buffer.from(buffer, 'binary');
+		res.end(jpg);
 		return;
-	});
+
+	}
+
+	if(!stopped){
+		res.writeHead(200, {'Content-Type': 'text/html'});
+
+		const cat = await getRandomCatFromDB();
+
+		// const html = `<img style="margin-left:0px auto;margin-right:0px auto;" src="/cat/${cat.uuid}" alt="${cat.uuid}"><br/><a href="/cat/${cat.uuid}">${cat.uuid}</a>`;
+
+		// get index.html
+		let index = fs.readFileSync('./index.html', "utf8", function(data){return data});
+		index = index.replaceAll("{{IMAGE_URL}}", "/cat/" +cat.uuid);
+		index = index.replaceAll("{{UUID}}", cat.uuid);
+
+		res.end(index);
+		return;
+		// let jpg = await getJPG(cat)
+		// let arrBuff = await jpg.arrayBuffer();
+		// storeCatsToMYSQL(arrBuff, cat)
+		// res.end(Buffer.from(arrBuff));
+		// return;
+	}
 })
 server.listen(process.env.HTTP_PORT || 1257, () => {
 	console.log('Server running at http://localhost:' + (process.env.HTTP_PORT || 1257) + '/');
@@ -198,6 +279,33 @@ const handleNewMedia = async (media) => {
 };
 
 
-setInterval(async () => {
-	await getCats();
-}, 1000 * 60 * 60);
+// setInterval(async () => {
+// 	await getCats();
+// }, 1000 * 60 * 15);
+
+const getRandomCatFromDB = async () => {
+	const cat = await db.query(`SELECT * FROM images ORDER BY RAND() LIMIT 1`);
+	return cat[0];
+}
+
+const storeCatsToMYSQL = async (arrayBuffer, url) => {
+	const buffer=Buffer.from(arrayBuffer,'binary');
+	await db.query(`INSERT INTO images (uuid, image, source, created_at) VALUES (UUID(), ?, ?, NOW()) ON DUPLICATE KEY UPDATE created_at = NOW()`, [buffer, url, url]);
+	// console.log(quer)
+}
+
+
+const getCat = async () => {
+	let url = await getRandomCat();
+	let jpg = await getMedia(url)
+
+	let blob = await jpg.arrayBuffer();
+
+	storeCatsToMYSQL(blob, url)
+}
+getCat()
+
+
+// setInterval(async () => {
+// 	await getCat();
+// } , 1000);
