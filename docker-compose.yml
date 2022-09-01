@@ -1,8 +1,7 @@
 services:
-  node:
-    container_name: cats_node
+  web:
     env_file:
-      - .env
+      - ./.env
     build: .
     restart: unless-stopped
     ports:
@@ -13,9 +12,8 @@ services:
       - ./media:/app/media
   db:
     image: mysql:5.7
-    container_name: cats_db
     env_file:
-      - .env
+      - ./.env
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
