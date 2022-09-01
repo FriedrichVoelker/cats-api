@@ -35,7 +35,8 @@ const server = http.createServer(async (req, res) => {
 	let stopped = false;
 	const url = req.url;
 
-	const clientDomain = req.headers.host;
+	const clientDomain = req.url.host;
+	const scheme = req.url.protocol || 'http:';
 
 
 	if(url == "/baso"){
@@ -74,7 +75,7 @@ const server = http.createServer(async (req, res) => {
 			resp.push({
 				"name": file,
 				"size": fileSizeInBytes,
-				"url": `http://${clientDomain}/media/${file}`,
+				"url": `${scheme}://${clientDomain}/media/${file}`,
 				"created": stats.birthtime
 			})
 
@@ -93,7 +94,7 @@ const server = http.createServer(async (req, res) => {
 			outcats[cat.uuid] = {
 				"source": cat.source,
 				"created": cat.created_at,
-				"url": `http://${clientDomain}/cat/${cat.uuid}`
+				"url": `${scheme}://${clientDomain}/cat/${cat.uuid}`
 			};
 		});
 
@@ -126,7 +127,7 @@ const server = http.createServer(async (req, res) => {
 		cat = {
 			"source": cat.source,
 			"created": cat.created_at,
-			"url": `http://${clientDomain}/cat/${cat.uuid}`
+			"url": `${scheme}://${clientDomain}/cat/${cat.uuid}`
 		}
 		res.writeHead(200, {'Content-Type': 'application/json'});
 		res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms", "cat": cat}));
