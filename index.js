@@ -317,9 +317,9 @@ const handleNewMedia = async (media) => {
 };
 
 
-// setInterval(async () => {
-// 	await getCats();
-// }, 1000 * 60 * 15);
+setInterval(async () => {
+	await getCats();
+}, 1000 * 60 * 15);
 
 const getRandomCatFromDB = async () => {
 	const cat = await db.query(`SELECT * FROM images ORDER BY RAND() LIMIT 1`);
