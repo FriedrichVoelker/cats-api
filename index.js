@@ -1,10 +1,8 @@
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 require("dotenv").config();
-const { clear } = require('console');
 const formData = require('form-data');
 const fs = require('fs');
 const http = require('http');
-const os = require('node:os');
 const db = require('./util/db.js');
 
 let interval;
@@ -54,52 +52,53 @@ const server = http.createServer(async (req, res) => {
 		return;
 	}
 
+	if(process.env.STEAL_BASOS_CATS == "true"){
+		if(url == "/baso"){
+			// get all files in media folder
+			const files = fs.readdirSync('./media');
+			res.writeHead(200, {'Content-Type': 'text/html'});
 
-	if(url == "/baso"){
-		// get all files in media folder
-		const files = fs.readdirSync('./media');
-		res.writeHead(200, {'Content-Type': 'text/html'});
+			const html = files.map((file) => {
+				return `<a href="/media/${file}">${file}</a><br/>`;
+			}).join("");
 
-		const html = files.map((file) => {
-			return `<a href="/media/${file}">${file}</a><br/>`;
-		}).join("");
+			res.end(html);
+			return;
+		}
 
-		res.end(html);
-		return;
-	}
+		// Api endpoint
 
-	// Api endpoint
+		if(url == "/api/baso/get"){
+			getCats();
+			res.writeHead(200, {'Content-Type': 'application/json'});
+			res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms","cats": "gotten"}));
+			return;
+		}
 
-	if(url == "/api/baso/get"){
-		getCats();
-		res.writeHead(200, {'Content-Type': 'application/json'});
-		res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms","cats": "gotten"}));
-		return;
-	}
+		if(url == "/api/baso"){
+			const files = fs.readdirSync('./media');
+			res.writeHead(200, {'Content-Type': 'application/json'});
 
-	if(url == "/api/baso"){
-		const files = fs.readdirSync('./media');
-		res.writeHead(200, {'Content-Type': 'application/json'});
+			let resp = []
 
-		let resp = []
+			files.forEach((file) => {
 
-		files.forEach((file) => {
+				
+				const stats = fs.statSync(`./media/${file}`);
+				const fileSizeInBytes = stats.size;
+				resp.push({
+					"name": file,
+					"size": fileSizeInBytes,
+					"url": `${scheme}://${clientDomain}/media/${file}`,
+					"created": stats.birthtime
+				})
 
-			
-			const stats = fs.statSync(`./media/${file}`);
-			const fileSizeInBytes = stats.size;
-			resp.push({
-				"name": file,
-				"size": fileSizeInBytes,
-				"url": `${scheme}://${clientDomain}/media/${file}`,
-				"created": stats.birthtime
 			})
 
-		})
 
-
-		res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms",cats:resp}));
-		return;
+			res.end(JSON.stringify({response_time: new Date().getTime() - now.getTime() + " ms",cats:resp}));
+			return;
+		}
 	}
 
 	if(url == "/api/all"){
@@ -190,8 +189,6 @@ const server = http.createServer(async (req, res) => {
 
 		const cat = await getRandomCatFromDB();
 
-		// const html = `<img style="margin-left:0px auto;margin-right:0px auto;" src="/cat/${cat.uuid}" alt="${cat.uuid}"><br/><a href="/cat/${cat.uuid}">${cat.uuid}</a>`;
-
 		// get index.html
 		let index = fs.readFileSync('./index.html', "utf8", function(data){return data});
 		index = index.replaceAll("{{IMAGE_URL}}", "/cat/" +cat.uuid);
@@ -199,11 +196,6 @@ const server = http.createServer(async (req, res) => {
 
 		res.end(index);
 		return;
-		// let jpg = await getJPG(cat)
-		// let arrBuff = await jpg.arrayBuffer();
-		// storeCatsToMYSQL(arrBuff, cat)
-		// res.end(Buffer.from(arrBuff));
-		// return;
 	}
 })
 server.listen(process.env.HTTP_PORT || 1257, () => {
@@ -212,6 +204,8 @@ server.listen(process.env.HTTP_PORT || 1257, () => {
 
 
 async function getCats() {
+	
+	if(process.env.STEAL_BASOS_CATS == "true"){
 	const data = await get(`https://api.twitter.com/2/tweets/search/recent?query=from:basostream has:media is:reply&tweet.fields=author_id&expansions=attachments.media_keys&media.fields=url`)
 
 	  data.includes.media.forEach(async (media) => {
@@ -244,6 +238,7 @@ async function getCats() {
 	  })
 
 }
+}
 
 const getRandomCat = async () => {
 	if(Math.random() > 0.5){
@@ -256,21 +251,23 @@ const getRandomCat = async () => {
 }
 
 const handleNewMedia = async (media) => {
-	const {media_key, type, url} = media;
+	if(process.env.STEAL_BASOS_CATS == "true"){
+		const {media_key, type, url} = media;
 
 
-	const form = new formData();
-	form.append('file1', fs.createReadStream(`./media/BasoStream_${media_key}.jpg`)); // give absolute path if possible
-	form.append('content', '@everyone 🐱📷✨')
-	form.append('username', "Baso")
-	form.append("avatar", "https://pbs.twimg.com/profile_images/1484871121921093638/Yet8n1j__400x400.jpg")
+		const form = new formData();
+		form.append('file1', fs.createReadStream(`./media/BasoStream_${media_key}.jpg`)); // give absolute path if possible
+		form.append('content', '@everyone 🐱📷✨')
+		form.append('username', "Baso")
+		form.append("avatar", "https://pbs.twimg.com/profile_images/1484871121921093638/Yet8n1j__400x400.jpg")
 
-	fetch(process.env.DISCORD_WEBHOOK_URL, {
-		'method': 'POST',
-		'body': form,
-		headers: form.getHeaders()
-	})
-	.catch(err => console.error(err));
+		fetch(process.env.DISCORD_WEBHOOK_URL, {
+			'method': 'POST',
+			'body': form,
+			headers: form.getHeaders()
+		})
+		.catch(err => console.error(err));
+	}
 };
 
 
