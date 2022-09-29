@@ -213,49 +213,6 @@ server.listen(process.env.HTTP_PORT || 1257, () => {
 
 async function getCats() {
 	const data = await get(`https://api.twitter.com/2/tweets/search/recent?query=from:basostream has:media is:reply&tweet.fields=author_id&expansions=attachments.media_keys&media.fields=url`)
-	// const data = {
-	// 	"data": [
-	// 	  {
-	// 		"text": "@itsmahluna 🥰❤️✨ https://t.co/hZ3Po4AoM1",
-	// 		"id": "1563646182223593472",
-	// 		"attachments": {
-	// 		  "media_keys": [
-	// 			"3_1563646177991692288"
-	// 		  ]
-	// 		},
-	// 		"author_id": "3005575467"
-	// 	  },
-	// 	  {
-	// 		"text": "@xLumenti 🥰🥰🥰 https://t.co/1sLJThtNsn",
-	// 		"id": "1562594123491979264",
-	// 		"attachments": {
-	// 		  "media_keys": [
-	// 			"3_1562594119247171584"
-	// 		  ]
-	// 		},
-	// 		"author_id": "3005575467"
-	// 	  }
-	// 	],
-	// 	"includes": {
-	// 	  "media": [
-	// 		{
-	// 		  "media_key": "3_1563646177991692288",
-	// 		  "type": "photo",
-	// 		  "url": "https://pbs.twimg.com/media/FbMv6hGXkAADA2S.jpg"
-	// 		},
-	// 		{
-	// 		  "media_key": "3_1562594119247171584",
-	// 		  "type": "photo",
-	// 		  "url": "https://pbs.twimg.com/media/Fa9zEo3XkAA0PRh.jpg"
-	// 		}
-	// 	  ]
-	// 	},
-	// 	"meta": {
-	// 	  "newest_id": "1563646182223593472",
-	// 	  "oldest_id": "1562594123491979264",
-	// 	  "result_count": 2
-	// 	}
-	//   }
 
 	  data.includes.media.forEach(async (media) => {
 		const {media_key, type, url} = media;
